@@ -1,85 +1,62 @@
-'''
-This file contains the Scraper class that is responsible for scraping scientists' social media and analyzing their research for commercial potential.
-'''
+
 import requests
 from bs4 import BeautifulSoup
 
 
 class Scraper:
-    def __init__(self):
-        # Replace with actual university names
-        self.universities = ["Denmarks Technical University",
-                             "DTU", "Denmark's Technical University"]
+    def __init__(self, base_url):
+        self.base_url = base_url
 
-    def scrape_scientists(self):
-        for university in self.universities:
-            scientists = self.get_scientists(university)
-            for scientist in scientists:
-                research = self.get_research(scientist)
-                commercial_potential = self.analyze_research(research)
-                if commercial_potential:
-                    self.save_lead(scientist, commercial_potential)
-
-    def get_scientists(self, university):
-        '''
-        Retrieves a list of scientists from social media based on the given university.
-        Args:
-            university (str): The name of the university.
-        Returns:
-            list: A list of scientist names.
-        '''
-        scientists = []
-        url = f"https://example.com/{university}/scientists"
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, "html.parser")
-            scientist_elements = soup.find_all("div", class_="scientist")
-            for scientist_element in scientist_elements:
-                scientist_name = scientist_element.find("h2").text
-                scientists.append(scientist_name)
-        return scientists
-
-    def get_research(self, scientist):
-        '''
-        Retrieves the research information for a given scientist.
-        Args:
-            scientist (str): The name of the scientist.
-        Returns:
-            list: A list of research titles.
-        '''
-        research = []
-        url = f"https://example.com/scientists/{scientist}/research"
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, "html.parser")
-            research_elements = soup.find_all("div", class_="research")
-            for research_element in research_elements:
-                research_title = research_element.find("h3").text
-                research.append(research_title)
-        return research
-
-    def analyze_research(self, research):
-        '''
-        Analyzes the research titles for commercial potential.
-        Args:
-            research (list): A list of research titles.
-        Returns:
-            bool: True if there is commercial potential, False otherwise.
-        '''
-        commercial_potential = False
-        for research_title in research:
-            if "commercial" in research_title.lower():
-                commercial_potential = True
+    def get_scientists(self):
+        current_url = self.base_url
+        all_scientists = []
+        while current_url:
+            response = requests.get(current_url)
+            if response.status_code != 200:
+                print(
+                    f"Failed to retrieve page {current_url}. Status code: {response.status_code}")
                 break
-        return commercial_potential
 
-    def save_lead(self, scientist, commercial_potential):
-        '''
-        Saves the lead in the venture capital firm's database.
-        Args:
-            scientist (str): The name of the scientist.
-            commercial_potential (bool): The commercial potential of the research.
-        '''
-        with open("leads.txt", "a") as file:
-            file.write(
-                f"Scientist: {scientist}, Commercial Potential: {commercial_potential}\n")
+            soup = BeautifulSoup(response.text, 'html.parser')
+            all_scientists.extend(self.extract_scientists_from_page(soup))
+
+            # Check for the next page link
+            next_button = soup.find("button", class_="a-link--next")
+            current_url = next_button['href'] if next_button else None
+
+        return all_scientists
+
+    def extract_scientists_from_page(self, soup):
+        scientist_rows = soup.find_all("tr", class_="o-person-list__table-tr")
+        scientists = []
+
+        for row in scientist_rows:
+            name_tag = row.find("a", class_="o-person-list__link")
+            if not name_tag:
+                continue
+
+            name = " ".join([span.text for span in name_tag.find_all(
+                "span") if not span.has_attr("class")])
+            profile_link = name_tag['href']
+            image_tag = name_tag.find("img")
+            image_url = image_tag['src'] if image_tag else None
+            role = row.find_all("td")[1].find("span").text if row.find_all("td")[
+                1].find("span") else None
+            email_tag = row.find("a", href=lambda x: x and "mailto:" in x)
+            email = email_tag['href'].replace(
+                "mailto:", "") if email_tag else None
+            phone_number_tag = row.find_all("td")[3].find("span")
+            phone_number = phone_number_tag.text if phone_number_tag else None
+            location = " ".join(
+                [span.text for span in row.find_all("td")[4].find_all("span")])
+
+            scientist_data = {
+                "name": name,
+                "profile_link": profile_link,
+                "image_url": image_url,
+                "role": role,
+                "email": email,
+                "phone_number": phone_number,
+                "location": location
+            }
+            scientists.append(scientist_data)
