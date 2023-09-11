@@ -1,0 +1,29 @@
+Task:
+build a scraper that follows scientists on social media from all danish universities and indepth understand if their research has commercial potential for our venture capital firm. In the end we want to increase our dealflow/leads 
+
+Config:
+ChatEnvConfig.clear_structure: True
+ChatEnvConfig.brainstorming: False
+
+
+Roster:
+Chief Executive Officer, Counselor, Chief Human Resource Officer, Chief Product Officer, Chief Technology Officer, Programmer, Code Reviewer, Software Test Engineer, Chief Creative Officer
+
+Modality:
+web application
+
+Ideas:
+
+
+Language:
+ Python
+
+Code_Version:
+6.0
+
+Proposed_images:
+0
+
+Incorporated_images:
+0
+
